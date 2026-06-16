@@ -9,7 +9,6 @@ add_compile_options(-fPIC)
 # ========== 控制选项 ==========
 set(BUILD_PLATFORM "arm" CACHE STRING "select build cpu type: x86 or arm")
 option(SEND_REMOTE "Auto-scp binary to robot after build" OFF)
-option(BUILD_NX_SDK "Build the NX-side SDK library" OFF)
 option(USE_MOLD_LINKER "Use mold linker for faster linking" OFF)
 
 if (BUILD_PLATFORM STREQUAL arm)
@@ -24,7 +23,6 @@ set(CMAKE_CXX_STANDARD 17)
 # ========== 显示参数 ==========
 message("BUILD_PLATFORM: ${BUILD_PLATFORM}")
 message("SEND_REMOTE:    ${SEND_REMOTE}")
-message("BUILD_NX_SDK:   ${BUILD_NX_SDK}")
 
 # 路径设置
 get_filename_component(WORKSPACE_DIR ./ ABSOLUTE)
@@ -92,19 +90,3 @@ if (SEND_REMOTE)
   )
 endif()
 
-# ========== NX Bridge SDK (可选) ==========
-if (BUILD_NX_SDK)
-  message("Building NX-side SDK library and examples")
-
-  add_library(nx_bridge STATIC
-    nx_bridge/nx_bridge.cpp
-  )
-  target_include_directories(nx_bridge PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/nx_bridge
-    ${CMAKE_CURRENT_SOURCE_DIR}/communication
-  )
-  target_link_libraries(nx_bridge pthread)
-
-  add_executable(nx_simple_controller examples/nx_simple_controller.cpp)
-  target_link_libraries(nx_simple_controller nx_bridge)
-endif()

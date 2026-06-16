@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Lite3 Lowlevel SDK is the low-level control runtime for the Lite3 quadruped robot, running on the RK3588 motion computer. It manages the state machine, hardware communication, 2 kHz PD control, and safety protection, while forwarding sensor data to a high-level controller (e.g. Jetson NX) and executing joint position commands received over UDP.
 
-The `nx_bridge/`, `nx_bridge_py/`, and `examples/` directories are **reference implementations** of the communication protocol. A separate high-level API is planned for the controller side.
+The high-level control API is provided by the separate [Lite3 Highlevel SDK](https://github.com/DeepRoboticsLab/Lite3_highlevel_sdk) repository.
 
 ## Build Commands
 
@@ -27,7 +27,6 @@ make -j
 ### CMake Options
 - `-DBUILD_PLATFORM`: `arm` (robot hardware, default) or `x86` (dev compile check)
 - `-DSEND_REMOTE=ON`: auto-SCP binary to robot after build
-- `-DBUILD_NX_SDK=ON`: also build the NX-side SDK library and examples
 - `-DUSE_MOLD_LINKER=ON`: use mold linker for faster linking
 
 ## Running
@@ -67,12 +66,6 @@ The central control loop at 2 kHz. States transition linearly: **Idle → StandU
 - `user_command_interface.h`: Abstract base for gamepad/keyboard
 - `retroid_gamepad_interface.hpp`: Retroid gamepad (default for hardware)
 
-### NX-side SDK (`nx_bridge/` and `nx_bridge_py/`)
-- `nx_bridge_api.hpp`: C++ public API — `NxBridge` class, `NxRobotState`, `NxJointCommand`, callback types
-- `nx_bridge.cpp`: C++ implementation (PIMPL). Recv + send threads, dual/single-callback modes.
-- `nx_bridge_py/`: Python equivalent — `NxBridge`, `NxRobotState`, `NxJointCommand` with same API surface.
-  Supports dual-callback (`on_obs` + `get_act`), single-callback (`policy(obs) -> act`), and `send_shutdown()`.
-
 ### Types (`types/`)
 - `common_types.h`: Eigen aliases (`VecXf`, `MatXf`), `RobotBasicState`, `RobotAction`, `UserCommand`, `MotionStateFeedback`
 - `custom_types.h`: Enums (`RobotType`, `RobotMotionState`, `StateName`)
@@ -97,4 +90,4 @@ The central control loop at 2 kHz. States transition linearly: **Idle → StandU
 | Adjust timeout | `communication/comm_bridge.hpp` `timeout_ms_` |
 | Change control gains | `state_machine/parameters/` |
 | Switch to keyboard control | `state_machine/state_machine.hpp` (comment in constructor) |
-| Write NX-side policy | Use `nx_bridge/nx_bridge_api.hpp` (see `examples/nx_simple_controller.cpp`) |
+| Write NX-side policy | Use [Lite3 Highlevel SDK](https://github.com/DeepRoboticsLab/Lite3_highlevel_sdk) |
