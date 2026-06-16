@@ -50,7 +50,7 @@ public:
     // ========================================================================
 
     /**
-     * @param nx_ip       IP address of the Jetson NX (e.g. "192.168.1.100")
+     * @param nx_ip       IP address of the Jetson NX (e.g. "192.168.1.103")
      * @param send_port   Port on NX that receives SensorPackets (default 31001)
      * @param recv_port   Local port to bind for receiving CommandPackets (default 31002)
      */
