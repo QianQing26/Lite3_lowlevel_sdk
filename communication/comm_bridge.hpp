@@ -139,6 +139,10 @@ public:
         if (recv_thread_.joinable()) recv_thread_.join();
         if (sock_send_ >= 0) { close(sock_send_); sock_send_ = -1; }
         if (sock_recv_ >= 0) { close(sock_recv_); sock_recv_ = -1; }
+        // Reset handshake flag so re-entry starts fresh
+        std::lock_guard<std::mutex> lock(cmd_mutex_);
+        guarded_cmd_.has_ready = false;
+        guarded_cmd_.last_recv_time = 0.0;
     }
 
     // ========================================================================
@@ -193,6 +197,18 @@ public:
         std::lock_guard<std::mutex> lock(cmd_mutex_);
         guarded_cmd_.last_recv_time = NowMs();
         guarded_cmd_.missed_count   = 0;
+    }
+
+    /// Check whether NX has sent the READY handshake heartbeat
+    bool HasReceivedReady() const {
+        std::lock_guard<std::mutex> lock(cmd_mutex_);
+        return guarded_cmd_.has_ready;
+    }
+
+    /// Reset handshake state (call before re-entering handshake)
+    void ResetReady() {
+        std::lock_guard<std::mutex> lock(cmd_mutex_);
+        guarded_cmd_.has_ready = false;
     }
 
     /**
@@ -317,7 +333,7 @@ private:
             if (rx_seq == SHUTDOWN_SEQUENCE) {
                 std::cout << "[CommBridge] Received shutdown from NX" << std::endl;
                 std::lock_guard<std::mutex> lock(cmd_mutex_);
-                guarded_cmd_.last_recv_time = 0.0;  // force IsTimeout() to eventually fire
+                guarded_cmd_.last_recv_time = 0.0;
                 guarded_cmd_.missed_count   = 999;
                 continue;
             }
@@ -328,6 +344,10 @@ private:
                 guarded_cmd_.pkt            = pkt;
                 guarded_cmd_.last_recv_time  = NowMs();
                 guarded_cmd_.missed_count    = 0;
+                // Handshake: check for READY heartbeat
+                if (ntohl(pkt.heartbeat) == HEARTBEAT_READY) {
+                    guarded_cmd_.has_ready = true;
+                }
             }
         }
 
@@ -360,6 +380,7 @@ private:
         CommandPacket pkt;
         double        last_recv_time;   // monotonic ms
         int           missed_count;
+        bool          has_ready = false; // handshake: NX sent HEARTBEAT_READY
     };
     GuardedCommand guarded_cmd_;
     mutable std::mutex cmd_mutex_;

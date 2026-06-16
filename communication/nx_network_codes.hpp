@@ -85,3 +85,11 @@ constexpr uint32_t SHUTDOWN_SEQUENCE = 0xFFFFFFFF;
 
 /// Heartbeat value that signals the RK3588 should ignore this packet
 constexpr uint32_t HEARTBEAT_SHUTDOWN = 0;
+
+/// Handshake: NX sets heartbeat==READY to acknowledge readiness for RL control
+constexpr uint32_t HEARTBEAT_READY = 0x0B0B0B0B;
+
+/// Deployment: IP address of the Jetson NX on the direct link to RK3588
+#ifndef NX_IP_ADDRESS
+#define NX_IP_ADDRESS "192.168.1.103"
+#endif

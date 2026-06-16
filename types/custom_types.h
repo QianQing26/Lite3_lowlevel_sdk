@@ -13,16 +13,18 @@ namespace types{
         StandingUp      = 1,
         JointDamping    = 2,
 
+        RLHandshakeMode = 5,
         RLControlMode   = 6,
     };
 
     enum StateName{
-        kInvalid      = -1,
-        kIdle         = 0,
-        kStandUp      = 1,
-        kJointDamping = 2,
+        kInvalid       = -1,
+        kIdle          = 0,
+        kStandUp       = 1,
+        kJointDamping  = 2,
 
-        kRLControl    = 6,
+        kRLHandshake   = 5,
+        kRLControl     = 6,
     };
     
 

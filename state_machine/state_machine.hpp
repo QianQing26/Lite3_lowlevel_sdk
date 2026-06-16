@@ -19,6 +19,7 @@
 #include "idle_state.hpp"
 #include "standup_state.hpp"
 #include "joint_damping_state.hpp"
+#include "rl_handshake_state.hpp"
 #include "rl_control_state_remote.hpp"
 #include "retroid_gamepad_interface.hpp"
 #include "hardware/hardware_interface.hpp"
@@ -29,6 +30,7 @@ private:
     std::shared_ptr<StateBase> current_controller_;
     std::shared_ptr<StateBase> idle_controller_;
     std::shared_ptr<StateBase> standup_controller_;
+    std::shared_ptr<StateBase> handshake_controller_;
     std::shared_ptr<StateBase> rl_controller_;
     std::shared_ptr<StateBase> joint_damping_controller_;
 
@@ -81,6 +83,9 @@ private:
             case StateName::kStandUp:{
                 return standup_controller_;
             }
+            case StateName::kRLHandshake:{
+                return handshake_controller_;
+            }
             case StateName::kRLControl:{
                 return rl_controller_;
             }
@@ -113,6 +118,7 @@ public:
 
         idle_controller_ = std::make_shared<IdleState>(robot_type, "idle_state", data_ptr);
         standup_controller_ = std::make_shared<StandUpState>(robot_type, "standup_state", data_ptr);
+        handshake_controller_ = std::make_shared<RLHandshakeState>(robot_type, "rl_handshake", data_ptr);
         rl_controller_ = std::make_shared<RLControlStateRemote>(robot_type, "rl_control", data_ptr);
         joint_damping_controller_ = std::make_shared<JointDampingState>(robot_type, "joint_damping", data_ptr);
 

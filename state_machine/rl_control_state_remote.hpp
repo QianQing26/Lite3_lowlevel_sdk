@@ -26,16 +26,6 @@
 #include <cmath>
 #include <cstring>
 
-// ============================================================================
-// Deployment-specific configuration — edit these for your setup
-// ============================================================================
-
-/// IP address of the Jetson NX on the direct link to RK3588.
-/// Use "127.0.0.1" for same-machine simulation testing.
-#ifndef NX_IP_ADDRESS
-#define NX_IP_ADDRESS "127.0.0.1"
-#endif
-
 /// Default safe PD gains used before the first NX command arrives,
 /// and as fallback if NX sends zeros.
 constexpr float DEFAULT_KP = 30.0f;
@@ -50,8 +40,6 @@ class RLControlStateRemote : public StateBase
 private:
     RobotBasicState rbs_;
     int state_run_cnt_;
-
-    std::shared_ptr<CommBridge> comm_;
 
     /// The last joint command sent to the robot — held between NX updates (ZOH).
     /// Pre-allocated and reused to avoid heap allocation in the 2 kHz hot path.
@@ -91,7 +79,7 @@ private:
     /// Uses the pre-allocated last_joint_command_ to avoid heap allocation.
     void ApplyJointCommand()
     {
-        bool got_cmd = comm_->GetLatestCommand(last_joint_command_);
+        bool got_cmd = data_ptr_->comm_ptr->GetLatestCommand(last_joint_command_);
 
         if (got_cmd)
         {
@@ -134,11 +122,6 @@ public:
         last_joint_command_ = MatXf::Zero(12, 5);
         has_received_command_ = false;
         std::memset(&cached_uc_, 0, sizeof(cached_uc_));
-
-        comm_ = std::make_shared<CommBridge>(NX_IP_ADDRESS);
-        std::cout << "[RLControlStateRemote] NX target: " << NX_IP_ADDRESS
-                  << ", send port: " << DEFAULT_SENSOR_PORT
-                  << ", recv port: " << DEFAULT_COMMAND_PORT << std::endl;
     }
 
     ~RLControlStateRemote() {}
@@ -163,17 +146,18 @@ public:
             last_joint_command_(i, 2) = DEFAULT_KD;
         }
 
-        comm_->Start();
+        // CommBridge already running from HandshakeState — just reset timeout
+        data_ptr_->comm_ptr->ResetTimeout();
 
         StateBase::msfb_.UpdateCurrentState(RobotMotionState::RLControlMode);
         uc_ptr_->SetMotionStateFeedback(StateBase::msfb_);
 
-        std::cout << "[RLControlStateRemote] Entered — waiting for NX commands" << std::endl;
+        std::cout << "[RLControlStateRemote] Entered" << std::endl;
     }
 
     virtual void OnExit() override
     {
-        comm_->Stop();
+        // CommBridge stays running — may re-enter via handshake after JointDamping
         state_run_cnt_ = -1;
         has_received_command_ = false;
         std::cout << "[RLControlStateRemote] Exited" << std::endl;
@@ -186,7 +170,7 @@ public:
         // Update the sensor data that CommBridge will send to NX.
         // Uses the cached UserCommand to avoid a second GetUserCommand() call.
         uint32_t ts_ms = static_cast<uint32_t>(ri_ptr_->GetInterfaceTimeStamp() * 1000.0);
-        comm_->UpdateSensorData(rbs_, cached_uc_,
+        data_ptr_->comm_ptr->UpdateSensorData(rbs_, cached_uc_,
                                 RobotMotionState::RLControlMode, ts_ms);
 
         // Apply the latest joint command from NX (or ZOH) to the robot
@@ -211,10 +195,10 @@ public:
         }
 
         // 3. Communication timeout — no command from NX
-        if (comm_->IsTimeout())
+        if (data_ptr_->comm_ptr->IsTimeout())
         {
             std::cout << "[RLControlStateRemote] Communication timeout — "
-                      << comm_->GetMissedPackets() << " missed packets"
+                      << data_ptr_->comm_ptr->GetMissedPackets() << " missed packets"
                       << std::endl;
             return true;
         }
